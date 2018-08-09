@@ -1,0 +1,98 @@
+remap --- if simulation, FROM follow_joint_trajectory TO /arm_controller/follow_joint_trajectory
+
+==========
+ur10_moveit_config move_group.launch
+==========
+  args: limited and debug
+  *** this is modified in ur10_moveit_config ***
+    <> joint limited option
+    <> node --- move_group
+      .-. param --- capabilities
+        zz MoveGroup capabilities loaded
+
+    ==========
+    ur10_moveit_config planning_context.launch
+    ==========
+      *** this is modified in ur10_moveit_config ***
+        <> only wrt joint limited, I think		 
+
+        param --- robot_description, ur_description ur10_robot.urdf.xacro
+	  <> either joint limited or not
+
+	param --- robot_description_semantic, ur10_moveit_config ur10.srdf
+
+	rosparam --- ur10_moveit_config joint_limits.yaml
+	  *** this is modified in ur10_moveit_config ***
+
+	rosparam --- ur10_moveit_config kinematics.yaml
+	  <> modified after MoveIt setup config to use KDLKinematicsPlugin instead of UR10KinematicsPlugin
+
+    args: many many for debug, verbose mode, and move_group settings
+
+    ==========
+    ur10_moveit_config planning_pipeline.launch.xml
+    ==========
+
+        arg: pipeline, default = ompl
+
+        ==========
+	ur10_moveit_config ompl_planning_pipeline.launch.xml
+        ==========
+
+	    param --- planning_plugin
+	    
+	    param --- request_adapters
+	    
+	    param --- start_state_max_bounds_error
+
+	    rosparam --- ur10_moveit_config ompl_planning.yaml
+	      *** this is modified in ur10_moveit_config (relative to MoveIt setup 180723 ***
+    
+    ==========
+    ur10_moveit_config trajectory_execution.launch.xml
+      if: allow_trajectory_execution
+    ==========
+      *** this is modified in ur10_moveit_config ***
+        <> allowed_start_tolerance is missing
+
+        param --- moveit_manage_controllers, default = true
+          <> indicate whether or not MoveIt is allowed to manage controllers
+
+        param --- trajoctory_execution/allowed_execution_duration_scaling = 1.2
+
+        param --- trajoctory_execution/allowed_goal_duration_margin = 0.5
+
+	==========
+	ur10_moveit_config ur10_moveit_controller_manager.launch.xml
+	==========
+          *** this is modified in ur10_moveit_config ***
+	    <> see notesFromCreeling for details
+
+	    rosparam --- ur10_moveit_config controllers.yaml
+              *** this is modified in ur10_moveit_config ***
+	        <> this file has to be created
+		  .-. see notesFromCreeling for details
+
+	    param --- use_controller_manager = false
+
+	    param --- trajectory_execution/execution_duration_monitoring = false
+
+	    param --- moveit_controller_manager = MoveItSimpleControllerManager
+    
+	    https://answers.ros.org/question/84806/using-moveit-to-actually-control-a-robot/
+
+    ==========
+    ur10_moveit_config sensor_manager.launch.xml
+    ==========
+
+        param --- octomap resolution = 0.25
+
+	param --- max_range = 5.0
+
+	==========
+	ur10_moveit_config ur10_moveit_sensor_manager.launch.xml
+	==========
+
+            EMPTY
+
+    node --- move_group

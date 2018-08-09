@@ -1,0 +1,15 @@
+"prefix" arg not used
+
+==========
+ur_description ur10_upload.launch
+==========
+
+    param --- robot_description, ur_description ur10_robot.urdf.xacro
+      <> either joint limited or not
+
+==========
+ur_modern_driver ur_common.launch
+==========
+
+    uses args as params for ur_driver node
+

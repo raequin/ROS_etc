@@ -1,0 +1,28 @@
+==========
+ur_gazebo ur10.launch
+==========
+|L| gazebo_ros empty_world.launch
+
+|L| ur_description ur10_upload.launch
+
+Spawn model
+
+|L| ur_gazebo controller_utils.launch
+
+rosparam:     ur_gazebo arm_controller_ur10.yaml
+
+node:	      controller_manager, arm_controller
+
+
+
+==========
+ur_description ur10_upload.launch
+==========
+param:	robot_description, ur_description ur10_robot.urdf.xacro
+  <> joint limited or not
+
+
+
+==========
+ur_gazebo controller_utils.launch
+==========

@@ -1,0 +1,15 @@
+arg: debug
+
+arg: config
+
+arg: command_args
+
+node --- rviz, anon rviz
+  <> if true == config then launch moveit.rviz
+
+    ==========
+    ur10_moveit_config/launch/moveit.rviz
+    ==========
+      *** this file is vastly different in ur10_moveit_config ***
+
+    rosparam --- ur10_moveit_config kinematics.yaml

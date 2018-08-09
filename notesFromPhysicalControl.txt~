@@ -1,0 +1,49 @@
+ERROR: cannot launch node of type [ur_modern_driver/ur_driver]: can't locate node [ur_driver] in package [ur_modern_driver]
+
+  <> .../catkin_ws$ catkin_make
+
+
+ur_modern_driver catkin_make error has no member named hardware_interface
+
+  <> https://github.com/ThomasTimm/ur_modern_driver/issues/135
+
+
+ur_modern_driver --- Ignoring transform for child_frame_id "tool0_controller"
+
+  <> When the connection to the UR controller is lost and reset then garbarge data is received for pose
+
+  <> https://github.com/ThomasTimm/ur_modern_driver/issues/128
+
+  <> Fixed (?) by selecting DHCP as network method instead of static address
+
+
+robotiq gripper
+
+  <> robotiq has a ROS package
+
+    .-. http://wiki.ros.org/robotiq
+
+  <> https://dof.robotiq.com/discussion/757/using-2-finger-gripper-attached-to-ur10-through-ros
+
+
+ROS on multiple machines
+
+  <> These Ubuntu computers are not publishing (?) hostname so they're only resolvable (ssh, ping, etc.) by IP address
+
+  <> Example with two computers, A and B
+
+A$ roscore
+
+A$ hostname -I
+<IP_A>
+A$ export ROS_IP=<IP_A>
+A$ export ROS_MASTER_UI=<IP_A>:11311
+A$ rosrun tutorials_etc listener.py
+
+B$ hostname -I
+<IP_B>
+B$ export ROS_IP=<IP_B>
+B$ export ROS_MASTER_UI=<IP_A>:11311
+B$ rosrun tutorials_etc talker.py
+
+  <?> Are these exports good for every terminal thereafter or just that one? 

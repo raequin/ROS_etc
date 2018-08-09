@@ -1,0 +1,484 @@
+MOVING A LINK AROUND IN GAZEBO VIA ROS PLUGIN
+
+-----
+Notes
+-----
+
+Need to use URDF instead of SDF, I believe
+
+  <> Starting with tf Python tutorials (prereq for URFD)
+
+  <> URDF joint http://wiki.ros.org/urdf/XML/joint
+
+  <> Sadly, URDF looks a lot different than SDF
+
+  <> Interesting resource: http://www.ros.org/reps/rep-0105.html
+
+  <> PRoblems with the parser_urdf.cc causes <gazebo reference="foo"> properties to be ignored
+  
+    .-. Solution is to remove name="bar" from <visual> and <collision> tags
+
+      zz https://bitbucket.org/osrf/sdformat/issues/132/parser-does-not-handle-urdf-material
+
+      zz Not correct (or at least inferior IMO) solution --- http://answers.gazebosim.org/question/15845/bug-with-colors-loading-from-xacro-in-gazebo-7/
+
+      zz Similar --- http://answers.gazebosim.org/question/15095/gazebo-contact-sensor-added-to-a-robot-link-in-urdf-file-is-not-working-as-expected/
+
+      zz Related --- http://answers.gazebosim.org/question/12687/problems-while-parsing-gazebo-urdf-elements-with-gazebo7-and-ros-jade/
+
+  <> Can generate URDF from xacro via "$ rosrun xacro xacro mobile_arm.urdf.xacro > mobile_arm.urdf"
+
+  <> Can generate SDF file generated from URDF via
+
+    .-. to view --- "$ gz sdf -p MODEL.urdf"
+
+    .-. to save --- "$ gz sdf -p MODEL.urdf > MODEL.sdf"
+
+    .-. http://gazebosim.org/tutorials?tut=ros_urdf#VerifyingtheGazeboModelWorks
+
+  <> To spawn and delete model in Gazebo from terminal:
+
+    .-. rosrun gazebo_ros spawn_model -file `rospack find mobile_manipulator`/models/mount_for_tool/mount_for_tool.urdf -urdf -model mft -x -1 -z 0.3
+
+    .-. rosrun gazebo_ros spawn_model -file /home/mom/.gazebo/models/Cone100/model.sdf -sdf -model cone100_08 -x 2
+
+      zz Earliest version of this note was "rosrun gazebo spawn_model -file `rospack find mobile_arm`/models/gripper/gripper_01.urdf -urdf -model gripper"
+
+    .-. rosservice call gazebo/delete_model '{model_name: gripper}'
+
+  <> To spawn and delete model in Gazebo from Python:
+
+    .-. https://answers.ros.org/question/246419/gazebo-spawn_model-from-py-source-code/
+
+    .-. http://answers.gazebosim.org/question/5553/how-does-one-use-gazebospawn_sdf_model/
+
+  <> Getting contact info, like force, between two bodies in Gazebo
+
+    .-. http://www.gazebosim.org/tutorials?tut=contact_sensor&cat=sensors
+
+  <> Good tutorial: http://gazebosim.org/tutorials?tut=ros_urdf
+
+
+
+Controlling wheels on mobile base
+
+  <> Can publish command
+
+    .-. rostopic pub -1 cmd_vel geometry_msgs/Twist '{linear: {x: 0}, angular: {z: 10.0}}'
+
+  <> Wheels in Gazebo model (slowly) roll of their own volition if no controller is used
+
+
+
+Setting joint value without plugin (used to bypass wheel problem mentioned above)
+
+  <> NOTE: THIS IS NOT USED ANYMORE --- USING PRISMATIC JOINT AND TRANSMISSION INSTEAD BECAUSE THE SET_MODEL_CONFIGURATION APPROACH FAILS WHEN ANY CONTROLLERS ARE PRESENT
+
+  <> Get rid of <transmission> and libgazebo_ros_control plugin
+
+  <> Set position with
+rosservice call /gazebo/set_model_configuration "model_name: 'wheeled_robot_model'
+
+urdf_param_name: 'robot_description'
+
+joint_names:
+
+- 'prismatic_chassis_to_world
+
+joint_positions:
+
+- 5"
+
+
+
+
+Need to learn more about ROS launch files, I believe
+
+  <> http://wiki.ros.org/roslaunch
+
+  <> "param vs rosparam"
+    .-. https://answers.ros.org/question/37916/when-to-use-param-and-rosparam-on-launch-file/
+
+  <> "gazebo ros Unable to find uri" problem
+    .-. Had to use the alias "creeling00" in my .bashrc file to have the GAZEBO PATHS set correctly
+
+  <> A Gentle Introduction to ROS (agitr) Chapter 6 --- Launch Files
+
+
+
+Error with joint controller "Controller Spawner couldn't find the expected controller_manager ROS interface"
+
+  <> Solution was that I had reference="my_chassis" in the <gazebo> tag so the plugin was not applied to the whole robot
+
+  <> Well, that worked on Friday but the following Tuesday it's back to "Controller Spawner couldn't find the expected controller_manager ROS interface"
+
+  <> Had to add namespace to controller spawner as:
+  <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
+	output="screen" args="--namespace=/gripper gripper_joint_position_controller joint_state_controller"/>
+
+    .-. This namespace is matched in the yaml file
+
+  <> Bigger problem might have been multiple controller_spawner nodes instead of giving multiple arguments to one
+
+    .-. THIS
+
+
+
+How to change (set) position of link
+
+  <> https://answers.ros.org/question/205507/controlling-robots-in-gazebo-without-using-gazebo-plugins/
+
+    .-. rostopic pub -1 /gazebo/set_model_state gazebo_msgs/ModelState '{model_name: testbot, pose: { position: { x: -0.32, y: 0, z: 2.1 }, orientation: {x: 0.0, y: 0.0, z: -0.766, w: 0.643 } }, reference_frame: world }'
+
+    .-. rostopic pub -1 /gazebo/set_model_state gazebo_msgs/ModelState '{model_name: mobile_arm, pose: { position: { x: 1.0, y: 0, z: 1.0 }, orientation: {x: 0.0, y: 0.0, z: 0.0, w: 0.0 } }, reference_frame: world }'
+
+  <> http://gazebosim.org/tutorials/?tut=ros_comm
+  
+  <> dispatch_node_01.py shows this working in a simple loop by publishing a ModelState to the /gazebo/set_model_state topic
+
+    .-. Next step is to create an action server that will take in a Pose and move the robot
+
+      zz Has an argument for if its
+
+      zz 
+
+
+
+UR 10 on mobile base
+
+  <> Having trouble when including the ros_control for the UR10 --- the mobile robot moves slowly
+
+    .-. http://answers.gazebosim.org/question/18684/mobile-arm-simulation-behaves-strangely-when-adding-ros_control-plugin/
+
+    .-. This was resolved by installing Gazebo 9 and the latest version of gazebo_ros_pkgs from source
+
+  <> publish joint pose to arm:
+
+rostopic pub /arm_controller/command trajectory_msgs/JointTrajectory "header: 
+  seq: 0
+  stamp: 
+    secs: 0
+    nsecs: 0
+  frame_id: ''
+joint_names: ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
+points: 
+  - 
+    positions: [0.0, -2.0, 0.0, 0.0, 0.0, 0.0]
+    velocities: []
+    accelerations: []
+    effort: []
+    time_from_start: 
+      secs: 2
+      nsecs: 990099009" --once
+
+
+
+Clean install of ROS with Gazebo 9 and latest gazebo_ros_pkgs (or follow this guide maybe? http://www.theconstructsim.com/all-about-gazebo-9-with-ros/):
+
+  <> sudo apt remove --purge ros-kinetic-*
+
+  <> sudo apt remove gazebo7 gazebo7-common gazebo7-plugin-base
+
+    .-. That is, all gazebo7* packages
+
+  <> Install ROS: http://wiki.ros.org/kinetic/Installation/Ubuntu
+
+    .-. Note rosdep and source sections
+
+  <> Remove old gazebo-ros packages:
+
+    .-. sudo apt remove --purge ros-kinetic-gazebo-ros ros-kinetic-gazebo-ros-pkgs
+
+  <> Remove gazebo again?
+
+  <> Install Gazebo 9: http://gazebosim.org/tutorials?tut=install_ubuntu&cat=install
+
+  <> Make a catkin workspace and initialize it: "Programming Robots with ROS," page 13
+
+  <> Install gazebo_ros_pkgs from source: http://gazebosim.org/tutorials?tut=ros_installing&cat=connect_ros#B.InstallfromSource(onUbuntu)
+
+  <> Errors with catkin_make can hopefully be resolved via "$ rosdep check --from-paths . --ignore-src --rosdistro kinetic" then install any missing packages via apt
+
+  <> Cannot install ros-kinetic-universal-robot package because it depends on default versions of gazebo-ros pacakges
+
+    .-. Follow instructions to install from source: http://wiki.ros.org/universal_robot#Installation
+
+      zz E.g., "$ git clone -b kinetic-devel https://github.com/ros-industrial/universal_robot.git"
+
+  <> sudo apt install ros-kinetic-position-controllers ros-kinetic-effort-controllers ros-kinetic-joint-trajectory-controller ros-kinetic-robot-state-publisher
+
+  <> I keep getting errors or problems and using "rosdep check" (see above) indicates that dependencies have not been satisfied.  Why this install and not other computer?
+
+    .-. This was for at least controllers, the (kinect) camera, and cmake.
+
+
+
+MoveIt!
+
+  <> Useful web pages
+
+    .-. https://moveit.ros.org/documentation/concepts/
+
+      zz ** this one is fundamental **
+
+    .-. http://docs.ros.org/kinetic/api/moveit_commander/html/classmoveit__commander_1_1move__group_1_1MoveGroupCommander.html
+
+    .-. http://docs.ros.org/kinetic/api/moveit_commander/html/classmoveit__commander_1_1planning__scene__interface_1_1PlanningSceneInterface.html
+
+    .-. http://docs.ros.org/kinetic/api/moveit_tutorials/html/doc/pr2_tutorials/planning/scripts/doc/move_group_python_interface_tutorial.html
+
+    .-. http://docs.ros.org/hydro/api/pr2_moveit_tutorials/html/planning/scripts/doc/move_group_python_interface_tutorial.html
+
+  <> "Trajectory message contains waypoints that are not strictly increasing in time."
+
+    .-. This message came from a cartesian movement where the current pose was the first waypoint.  Removing the initial pose resulted in success.
+
+    .-. https://answers.ros.org/question/253004/moveit-problem-error-trajectory-message-contains-waypoints-that-are-not-strictly-increasing-in-time/
+
+  <> For error, "Parameter '~moveit_controller_manager' not specified. This is needed to identify the plugin to use for interacting with controllers. No paths can be executed."
+
+    .-. Edit ..._moveit_config/launch/..._moveit_controller_manager.launch and create ..._moveit_config/config/controllers.yaml
+
+      zz launch file:
+<launch>
+  <rosparam file="$(find mobile_arm_moveit_config)/config/controllers.yaml"/>
+  <param name="use_controller_manager" value="false"/>
+  <param name="trajectory_execution/execution_duration_monitoring" value="false"/>
+  <param name="moveit_controller_manager" value="moveit_simple_controller_manager/MoveItSimpleControllerManager"/>
+</launch>
+
+      zz yaml:
+controller_list:
+  - name: ""
+    action_ns: follow_joint_trajectory
+    type: FollowJointTrajectory
+    joints:
+      - shoulder_pan_joint
+      - shoulder_lift_joint
+      - elbow_joint
+      - wrist_1_joint
+      - wrist_2_joint
+      - wrist_3_joint
+
+  <> must provide both start and goal pisitions (if base moves, I think)
+
+    .-. https://answers.ros.org/question/217032/help-required-for-using-moveit-on-custom-mobile-robot-with-arm/
+
+  <> Two problems with using ur10-moveit-configuration
+
+    .-. Joints not found
+
+    .-. Mobile base joints not configured
+
+    .-. Resolved by using moveit setup assistant (MSA) on mobile_arm
+
+  <> Working to get wheel2 and wheel5 joint data published (need tf also?)
+
+    .-. Ignored this and just set them as passive joints in MSA
+
+  <> Received error that each joint group was not a chain
+
+    .-. Printed visualization of robot model and used that to edit SDF file
+
+      zz rosrun xacro xacro mobile_arm.urdf.xacro > mobile_arm.urdf
+
+      zz urdf_to_graphiz mobile_arm.urdf
+
+    .-. Edited the SDF file by commenting out joints not in the chain, e.g., "base_link-base_fixed_joint"
+
+  <> Received error that "Parameter '~moveit_controller_manager' not specified. This is needed to identify the plugin to use for interacting with controllers. No paths can be executed."
+
+    .-. Solved (?) by adding this line to "mobile_arm.launch": <remap if="$(arg sim)" from="/follow_joint_trajectory" to="/arm_controller/follow_joint_trajectory"/>
+
+      zz Before this line: <include file="$(find mobile_arm_moveit_config)/launch/move_group.launch" />
+
+  <> Received error "RRTConnect: Unable to sample any valid states for goal tree"
+
+    .-. Probably because target pose was not reachable
+
+    .-. Moved robot to random valid pose in moveit demo and then queried pose via
+        cur_pos = group.get_current_pose()
+        print(cur_pos)
+
+  <> Found that with prismatic joint for chassis the trajectory tolerance was exceeded NOT REALLY, THIS COULD HAVE BEEN A PROBLEM FROM REDUNDANT CONTROLLERS (SEE "JOINT CONTROLLERS")
+
+    .-. Changed mobile base to fixed joint CHANGED IT BACK TO PRISMATIC
+
+  <> Attaching a 3D sensor for using point cloud to update octomap:
+
+    .-. http://docs.ros.org/kinetic/api/moveit_tutorials/html/doc/pr2_tutorials/planning/src/doc/perception_configuration.html?highlight=octomap#yaml-configuration-file-point-cloud
+
+      zz The tutorial seems to leave out a bit of info --- the following two lines were added to mobile_manipulator_moveit_config/launch/mobile_ur10_moveit_sensor_manager.launch.xml
+<rosparam command="load" file="$(find mobile_manipulator_moveit_config)/config/sensors_kinect_pointcloud.yaml" />
+<rosparam command="load" file="$(find mobile_manipulator_moveit_config)/config/sensors_kinect_depthmap.yaml" />
+
+      zz ROS gives an error about RGB8 with the above configuration so the depthmap config file is not loaded (commented out) and octomap appears to still work
+
+  <> NOTE: need to re-do moveit_config because the mobile_manipulator package currently somehow relies on the mobile_arm config
+
+  <> There is a rosservice to reset the octomap: "clear_octomap"
+
+    .-. From terminal, $ rosservice call clear_octomap
+
+    .-. "Programming Robots with ROS" uses a ServiceProxy to clear the octomap --- page 248 (Example 14-15)
+
+  <> When using MoveIt! Setup Assistant, one must first run xacro to update the urdf (if any changes have been made)
+
+  <> Good tutorial:
+
+    .-. https://github.com/guihomework/dexterous-manipulation-tutorial/wiki/tuto-using-part1
+
+  <> planningsceneinterface error with mesh import --- there is a fix at this page
+
+    .-. https://github.com/ros-planning/moveit/issues/86
+
+    .-. But then there's apt error with unmet dependency?
+
+  <> 
+
+
+
+MoveIt! pick and place
+
+  <> Need to add object to scene then use pick method
+
+    .-. This is apparently part of the pick and place pipeline which is complicated to use
+
+    .-. But it looks do-able
+
+      zz https://groups.google.com/forum/#!msg/moveit-users/_M0mf-R7AvI/CGdh10TrAxMJ
+
+  <> Maybe need set_support_surface_name
+
+The `setSupportSurface("table")` isn't
+strictly required. AFAIK, all it does is ignore collisions with the
+"part" object once it's attached to your gripper, but those collisions
+can only happen *after* it's attached.
+
+    .-. https://groups.google.com/forum/#!msg/moveit-users/_M0mf-R7AvI/-EwLaBPWXhYJ
+
+  <> Hoping can use moveit_msgs allowed_touch_objects to turn off collision avoidance with object
+
+    .-. http://docs.ros.org/api/moveit_msgs/html/msg/Grasp.html
+
+    .-. Seems to not be this simple, could try using pick
+
+  <> Links
+
+https://github.com/ros-planning/moveit_tutorials/issues/98
+
+http://wiki.ros.org/darrt/Tutorials/Simple%20Pick%20and%20Place
+
+https://groups.google.com/forum/#!msg/moveit-users/_M0mf-R7AvI/CGdh10TrAxMJ
+
+    
+
+Joint controllers
+
+  <> https://answers.ros.org/question/273947/moving-joints-in-gazebo-simple-example/
+
+  <> Learned to only use one spawner and provide args to the different names in the yaml files
+
+
+
+Gazebo had problem with stacking cones
+
+  <> http://answers.gazebosim.org/question/19044/stack-of-two-models-unstable-bouncing/
+
+  <> Fixed problem by setting min_depth in the contact element to 0.001
+
+
+
+Move gripper and mobile base joints from terminal
+
+  <> rostopic pub -1 gripper_fake_controller_p/command std_msgs/Float64 2.0
+
+  <> rostopic pub -1 mobile_base_fake_controller/command std_msgs/Float64 2.0
+
+
+
+Promising packages:
+
+  <> vision_visp https://github.com/lagadic/vision_visp
+
+    .-. http://visp.inria.fr/
+
+  <> jog_arm https://wiki.ros.org/jog_arm
+
+    .-. Maybe not needed in light of universal_robot package
+
+  <> look_at_pose https://wiki.ros.org/look_at_pose
+
+    .-. Maybe useful?
+
+
+
+Notes on changing gripper to two joints:
+
+  <> gripper_fake_controller.yaml
+gripper_fake_controller:
+  type: effort_controllers/JointPositionController
+  joint: gripper_joint
+  pid: {p: 1000, i: 0.1, d: 10.0}
+
+    .-. Split this into two yamls for two controllers
+
+  <> mobile_manipulator.urdf.xacro
+<!-- joint to attach gripper to mount -->
+<joint name="gripper_to_mount" type="fixed">
+  <origin xyz=".15 0 .205" rpy="0 0 0" />
+  <parent link="mount_link" />
+  <child link="gripper_wide_block_p" />
+</joint>
+
+    .-. Changed child to gripper_center
+
+      zz Necessitated updating MoveIt! configuration file
+
+  <> old_gripper_fake.urdf.xacro
+
+  <> Got error: This robot has a joint named "gripper_joint_p" which is not in the gazebo model.
+
+    .-. Added mass to gripper_center joint
+
+
+
+Force torque sensor Gazebo plugin
+
+  <> https://answers.ros.org/question/268979/force-torque-sensor-and-control-force-values/
+
+  <> Use rqt_plot to record force components (from ROS By Example Vol 2)
+
+
+
+Planning with MoveIt! and end-effector
+
+  <> Need to plan moves at tool flange since IK solver uses that model?
+
+    .-. https://groups.google.com/forum/#!topic/moveit-users/VB7VWsgV9-g
+
+
+
+Depth camera
+
+  <> Suggested model(s) --- https://groups.google.com/forum/#!topic/swri-ros-pkg-dev/ruxCpG9m6P8
+
+
+
+tf and tf2
+
+  <> http://wiki.ros.org/tf/TfUsingPython
+
+    .-. Documentation for TransformListener
+
+    .-. This is for tf, not tf2, I believe
+
+  <> http://mirror.umd.edu/roswiki/doc/kinetic/api/tf/html/python/tf_python.html#
+
+  <> https://github.com/ros/geometry/blob/hydro-devel/tf/src/tf/transformations.py
+
+
+
+visual servoing
+
+  <> https://answers.ros.org/question/280377/ur5-visual-servoing/

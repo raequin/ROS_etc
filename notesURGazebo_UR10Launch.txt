@@ -1,0 +1,31 @@
+gazebo_ros empty_world.launch
+
+==========
+ur_description ur10_upload.launch
+==========
+
+    param --- robot_description, ur_description ur10_robot.urdf.xacro
+      <> either joint limited or not
+
+Spawn model
+
+==========
+ur_gazebo controller_utils.launch
+==========
+
+    node --- robot_state_publisher
+      <> http://wiki.ros.org/robot_state_publisher
+      <> publishes robot state to tf (or tf2?)
+
+    node --- rostopic, fake_joint_calibration
+      <> Just a Bool stating that it's calibrated
+
+    rosparam --- ur_gazebo joint_state_controller.yaml
+
+    node --- controller_manager, joint_state_controller
+
+rosparam --- ur_gazebo arm_controller_ur10.yaml
+  <> http://wiki.ros.org/joint_trajectory_controller
+  <> This could be the source of "controller failure" that E.N. reports seeing in simulation
+
+node --- controller_manager, arm_controller

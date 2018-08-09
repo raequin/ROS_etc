@@ -1,0 +1,8 @@
+remap:	if simulation, FROM follow_joint_trajectory TO /arm_controller/follow_joint_trajectory
+
+==========
+ur10_moveit_config move_group.launch
+==========
+  args:	limited and debug
+
+    

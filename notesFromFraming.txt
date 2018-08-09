@@ -1,0 +1,14 @@
+Multiple robots how-to --- https://answers.ros.org/question/41433/multiple-robots-simulation-and-navigation/
+
+Single robot (URDF) with two manipulators:
+
+  <> Need to make separate controllers for each arm
+
+    .-. First attempt was to edit controllers.yaml following this example
+
+      zz http://docs.ros.org/indigo/api/pr2_moveit_tutorials/html/planning/src/doc/controller_configuration.html
+
+    .-. More attempts were necessary to get joint controller names to match in moveit controllers.yaml, gazebo_framing.launch, hydra_placer_arm_controller.yaml, and hydra_attacher_arm_controller.yaml
+
+    .-. No change needed to remap in moveit_planning_execution.launch
+
